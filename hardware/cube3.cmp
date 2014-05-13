@@ -1,4 +1,4 @@
-Cmp-Mod V01 Created by CvPcb (2013-dec-23)-stable date = Mon 12 May 2014 12:22:26 BST
+Cmp-Mod V01 Created by CvPcb (2013-dec-23)-stable date = Tue 13 May 2014 01:32:58 BST
 
 BeginCmp
 TimeStamp = /53626161;
@@ -94,14 +94,14 @@ EndCmp
 BeginCmp
 TimeStamp = /53625E8C;
 Reference = P3;
-ValeurCmp = DATA_IN;
+ValeurCmp = DATA;
 IdModule  = SIL-6;
 EndCmp
 
 BeginCmp
 TimeStamp = /536248BD;
 Reference = P4;
-ValeurCmp = DATA_OUT;
+ValeurCmp = DATA;
 IdModule  = SIL-6;
 EndCmp
 
@@ -136,14 +136,14 @@ EndCmp
 BeginCmp
 TimeStamp = /53637FB4;
 Reference = P9;
-ValeurCmp = C_OUT;
+ValeurCmp = K_OUT;
 IdModule  = SIL-36;
 EndCmp
 
 BeginCmp
 TimeStamp = /53637FCD;
 Reference = P10;
-ValeurCmp = C_IN;
+ValeurCmp = K_IN;
 IdModule  = SIL-36;
 EndCmp
 
@@ -242,7 +242,7 @@ BeginCmp
 TimeStamp = /5362742B;
 Reference = R5;
 ValeurCmp = 10k;
-IdModule  = R4-LARGE_PADS;
+IdModule  = R3-5;
 EndCmp
 
 BeginCmp
@@ -250,6 +250,20 @@ TimeStamp = /5362772A;
 Reference = R6;
 ValeurCmp = 10k;
 IdModule  = R3-5;
+EndCmp
+
+BeginCmp
+TimeStamp = /537167CD;
+Reference = R7;
+ValeurCmp = 0;
+IdModule  = SM0603;
+EndCmp
+
+BeginCmp
+TimeStamp = /537167DC;
+Reference = R8;
+ValeurCmp = 0;
+IdModule  = SM0603;
 EndCmp
 
 BeginCmp

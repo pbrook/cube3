@@ -1,4 +1,4 @@
-PCBNEW-LibModule-V1  Mon 12 May 2014 23:07:26 BST
+PCBNEW-LibModule-V1  Tue 13 May 2014 01:20:50 BST
 # encoding utf-8
 Units mm
 $INDEX
@@ -866,13 +866,13 @@ Po 3.81 0
 $EndPAD
 $EndMODULE power2
 $MODULE rgb_cathode
-Po 0 0 0 15 53714613 00000000 ~~
+Po 0 0 0 15 5371655E 00000000 ~~
 Li rgb_cathode
 Cd RGB Cathode Socket
 Sc 0
 AR /53645008
 Op 0 0 0
-T0 -1.27 3.81 1.016 1.016 0 0.2032 N I 21 N "K0"
+T0 5.08 -4.445 2.794 2.54 0 0.508 N V 21 N "K0"
 T1 -1.27 -5.08 1.016 1.016 0 0.2032 N I 21 N "RGB_CATHODE"
 T2 -5.715 2.54 1 1 0 0.15 N V 21 N "B"
 T2 5.715 2.54 1 1 0 0.15 N V 21 N "G"

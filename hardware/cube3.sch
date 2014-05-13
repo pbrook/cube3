@@ -37,7 +37,7 @@ $Descr A4 11693 8268
 encoding utf-8
 Sheet 1 1
 Title ""
-Date "12 may 2014"
+Date "13 may 2014"
 Rev ""
 Comp ""
 Comment1 ""
@@ -316,13 +316,13 @@ L CONN_6 P4
 U 1 1 536248BD
 P 4450 4650
 F 0 "P4" V 4400 4650 60  0000 C CNN
-F 1 "DATA_OUT" V 4500 4650 60  0000 C CNN
+F 1 "DATA" V 4500 4650 60  0000 C CNN
 F 2 "SIL-6" H 4450 4650 60  0001 C CNN
 F 3 "" H 4450 4650 60  0000 C CNN
 	1    4450 4650
 	1    0    0    -1  
 $EndComp
-Text Label 3700 3300 0    60   ~ 0
+Text Label 3700 3400 0    60   ~ 0
 BLANK
 Text Label 3700 3100 0    60   ~ 0
 SCLK
@@ -332,7 +332,7 @@ Text Label 3700 2800 0    60   ~ 0
 SIN
 Text Label 3300 4400 0    60   ~ 0
 GND
-Text Label 3700 3400 0    60   ~ 0
+Text Label 3700 1100 0    60   ~ 0
 DCPRG
 Text Label 5900 1300 2    60   ~ 0
 SIN
@@ -341,7 +341,7 @@ L CONN_6 P3
 U 1 1 53625E8C
 P 2950 4650
 F 0 "P3" V 2900 4650 60  0000 C CNN
-F 1 "DATA_IN" V 3000 4650 60  0000 C CNN
+F 1 "DATA" V 3000 4650 60  0000 C CNN
 F 2 "SIL-6" H 2950 4650 60  0001 C CNN
 F 3 "" H 2950 4650 60  0000 C CNN
 	1    2950 4650
@@ -397,7 +397,7 @@ F 3 "~" H 4700 1200 60  0000 C CNN
 $EndComp
 Text Label 4800 1400 0    60   ~ 0
 GND
-Text Label 3700 1100 0    60   ~ 0
+Text Label 3700 3300 0    60   ~ 0
 GSCK
 Text Label 3700 2900 0    60   ~ 0
 SYNCA
@@ -533,7 +533,7 @@ Text Label 8600 5000 2    60   ~ 0
 5v
 Text Label 8600 5400 2    60   ~ 0
 GND
-NoConn ~ 3700 2150
+NoConn ~ 3700 2250
 NoConn ~ 3700 2050
 NoConn ~ 1800 1700
 Text Label 3700 1950 0    60   ~ 0
@@ -803,7 +803,7 @@ Wire Wire Line
 	2100 7100 2100 7300
 Wire Wire Line
 	2200 7100 2200 7000
-Text Label 3700 2250 0    60   ~ 0
+Text Label 3700 2150 0    60   ~ 0
 VPRG
 Text Label 2500 7100 0    60   ~ 0
 H0
@@ -884,7 +884,7 @@ L CONN_36 P9
 U 1 1 53637FB4
 P 8450 2600
 F 0 "P9" V 8401 2600 60  0000 C CNN
-F 1 "C_OUT" V 8500 2600 60  0000 C CNN
+F 1 "K_OUT" V 8500 2600 60  0000 C CNN
 F 2 "" H 8450 2600 60  0000 C CNN
 F 3 "" H 8450 2600 60  0000 C CNN
 	1    8450 2600
@@ -897,7 +897,7 @@ L CONN_36 P10
 U 1 1 53637FCD
 P 9350 2600
 F 0 "P10" V 9301 2600 60  0000 C CNN
-F 1 "C_IN" V 9400 2600 60  0000 C CNN
+F 1 "K_IN" V 9400 2600 60  0000 C CNN
 F 2 "" H 9350 2600 60  0000 C CNN
 F 3 "" H 9350 2600 60  0000 C CNN
 	1    9350 2600
@@ -1122,4 +1122,43 @@ Wire Wire Line
 Wire Wire Line
 	4000 7200 4100 7200
 Connection ~ 4000 7100
+Text Label 3700 2350 0    60   ~ 0
+ID0
+Text Label 3700 2450 0    60   ~ 0
+ID1
+$Comp
+L R R7
+U 1 1 537167CD
+P 1750 4000
+F 0 "R7" V 1830 4000 40  0000 C CNN
+F 1 "0" V 1757 4001 40  0000 C CNN
+F 2 "~" V 1680 4000 30  0000 C CNN
+F 3 "~" H 1750 4000 30  0000 C CNN
+	1    1750 4000
+	0    1    1    0   
+$EndComp
+$Comp
+L R R8
+U 1 1 537167DC
+P 1750 4200
+F 0 "R8" V 1830 4200 40  0000 C CNN
+F 1 "0" V 1757 4201 40  0000 C CNN
+F 2 "~" V 1680 4200 30  0000 C CNN
+F 3 "~" H 1750 4200 30  0000 C CNN
+	1    1750 4200
+	0    1    1    0   
+$EndComp
+Text Label 2200 4000 0    60   ~ 0
+GND
+Text Label 1500 4000 2    60   ~ 0
+ID0
+Text Label 1500 4200 2    60   ~ 0
+ID1
+Wire Wire Line
+	2200 4000 2000 4000
+Wire Wire Line
+	2100 4000 2100 4200
+Wire Wire Line
+	2100 4200 2000 4200
+Connection ~ 2100 4000
 $EndSCHEMATC
