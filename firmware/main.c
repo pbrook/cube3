@@ -158,8 +158,9 @@ static volatile uint8_t fb_offset;
 static volatile bool sending_frame;
 static volatile uint8_t dc_bytes;
 static volatile bool dc_changed;
-
-static uint8_t dc[12];
+static volatile uint8_t dc_red;
+static volatile uint8_t dc_green;
+static volatile uint8_t dc_blue;
 
 static void
 send_data(void)
@@ -169,24 +170,33 @@ send_data(void)
   if ((UCSR0A & _BV(UDRE0)) == 0)
     return;
 
-#ifdef DO_DC
   //  All data is send MSB first
   if (dc_bytes) {
       // Dot correction data
+      if (dc_bytes > 6)
+	tmp = dc_blue;
+      else if (dc_bytes > 3)
+	tmp = dc_green;
+      else
+	tmp = dc_red;
       dc_bytes--;
-      UDR0 = dc[dc_bytes];
+      UDR0 = (tmp << 2) | tmp >> 4;
+      while ((UCSR0A & _BV(UDRE0)) == 0)
+	/* no-op */;
+      UDR0 = (tmp << 4) | tmp >> 2;
+      while ((UCSR0A & _BV(UDRE0)) == 0)
+	/* no-op */;
+      UDR0 = (tmp << 6) | tmp;
       if (dc_bytes == 0) {
 	  // Wait for the transmit to complete
-	  _delay_us(20);
+	  _delay_us(5);
 	  // Latch data into register
 	  SET_XLAT();
 	  CLEAR_XLAT();
 	  SET_DCPRG();
 	  CLEAR_VPRG();
       }
-  } else
-#endif
-  if (sending_frame) {
+  } else if (sending_frame) {
       // PWM data
       // The count registers are 12 bits, so a pair of values expand to 
       // 3 bytes of data.  We can not submit all this immediately, but the USART
@@ -199,14 +209,13 @@ send_data(void)
 	/* no-op */;
       UDR0 = tmp;
       tmp = display_framebuffer[fb_offset++];
-      if (fb_offset == 16 * 3) {
-	  _delay_us(2);
-	  sending_frame = false;
-      }
       while ((UCSR0A & _BV(UDRE0)) == 0)
 	/* no-op */;
       UDR0 = tmp;
-  } else {
+      if (fb_offset == 16 * 3) {
+	  _delay_us(5);
+	  sending_frame = false;
+      }
   }
 }
 
@@ -226,12 +235,9 @@ set_dc(uint8_t red, uint8_t green, uint8_t blue)
   eeprom_update_byte(&eeprom_dc_g, green);
   eeprom_update_byte(&eeprom_dc_b, blue);
   /* Dot correction data is only 6 bits.  */
-  red >>= 2;
-  green >>= 2;
-  blue >>= 2;
-  red_dc = red | red << 6;
-  green_dc = green | green << 6;
-  blue_dc = blue | blue << 6;
+  dc_red = red >> 2;
+  dc_green = green >> 2;
+  dc_blue = blue >> 2;
   dc_changed = true;
 }
 
@@ -288,7 +294,7 @@ do_data(void)
 	continue;
       if (cmd < 16 * 8) {
 	  // Map from packed RGB to the planar MSB framebuffer
-	  uint16_t pos = ((uint16_t)(cmd & 0xf0)) * 16 * 3;
+	  uint16_t pos = ((uint16_t)(cmd & 0xf0)) * 3;
 	  pos += 0xf - (cmd & 0xf);
 	  set_pixel(pos + 32, d0);
 	  set_pixel(pos + 16, d1);
@@ -302,7 +308,7 @@ do_data(void)
 	  /* Set brightness */
 	  set_dc(d0, d1, d2);
       } else if (cmd == 0xe1) {
-	  if (d0 == my_address)
+	  if (d0 == my_address || d0 == 0xff)
 	    sm = SM_ACTIVE;
 	  else
 	    sm = SM_READY;
@@ -387,14 +393,12 @@ ISR(TIMER1_COMPA_vect)
   display_framebuffer = &framebuffer[(((uint16_t)display_frame * 8) + next_anode) * 16 * 3];
   fb_offset = 0;
   sending_frame = true;
-#ifdef DO_DC
   // And dot correction data if needed
   if (dc_changed) {
       dc_bytes = 12;
       SET_VPRG();
       dc_changed = false;
   }
-#endif
   // Triggering the greyscale clock is timing critical, so disable interrupts
   cli();
   // Trigger the output pulse
