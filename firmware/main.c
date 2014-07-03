@@ -314,6 +314,7 @@ do_data(void)
 	    sm = SM_READY;
       } else {
 	  /* Unknown command.  */
+	  sm = SM_IDLE;
       }
   }
 }
