@@ -27,8 +27,6 @@ static volatile uint8_t *display_framebuffer;
 
 volatile uint8_t next_anode;
 
-volatile uint8_t ticks;
-
 #define FIFO_MASK (FIFO_SIZE - 1)
 #if (FIFO_SIZE & FIFO_MASK) != 0
 #error
@@ -46,8 +44,15 @@ volatile uint8_t fifo_head;
 #define SET_VPRG() PORTC |= _BV(2)
 #define CLEAR_VPRG() PORTC &= ~_BV(2)
 
-#define SET_DCPRG() PORTB |= _BV(0);
-#define CLEAR_DCPRG() PORTB &= ~_BV(0);
+#define SET_DCPRG() PORTB |= _BV(0)
+#define CLEAR_DCPRG() PORTB &= ~_BV(0)
+
+#define SYNCA_LOW() PORTD &= ~_BV(2)
+#define SYNCA_HIGH() PORTD |= _BV(2)
+#define SYNCA_READ() (PIND & _BV(2))
+#define SYNCB_LOW() PORTD &= ~_BV(3)
+#define SYNCB_HIGH() PORTD |= _BV(3)
+#define SYNCB_READ() (PIND & _BV(3))
 
 // enable pullups on unused pins
 static void
@@ -90,7 +95,7 @@ init_spi_master(void)
   PORTD |= _BV(0);
 }
 
-// 2kHz refresh timer
+// 2kHz refresh timer.  Only used by device 0
 static void
 init_timer(void)
 {
@@ -259,6 +264,7 @@ do_data(void)
   uint8_t fifo_tail;
   uint8_t sm;
 
+  sm = SM_IDLE;
   fifo_tail = 0;
   while (true) {
       send_data();
@@ -357,16 +363,14 @@ ISR(SPI_STC_vect)
 }
 #endif
 
-ISR(TIMER1_COMPA_vect)
+static void
+do_scanline(void)
 {
   static uint8_t overload;
-  ticks++;
-  // Enable interrupts so we are not blocking the SPI slave interrupt.
-  // The clock period is long enough that we don't have to worry about
-  // nested timer interrupts
-  sei();
-  if (sending_frame)
-    overload = 0xff;
+  if (sending_frame) {
+      overload = 0xff;
+      next_anode = 0xff;
+  }
 
   disable_gsclk();
   SET_BLANK();
@@ -375,19 +379,38 @@ ISR(TIMER1_COMPA_vect)
       return;
   }
   if (next_anode != 0xff && !overload) {
-      // Latch data into the register
-      SET_XLAT();
-      CLEAR_XLAT();
+      if (my_address == 0) {
+	  if (next_anode == 0) {
+	      SYNCB_LOW();
+	  }
+	  SYNCA_LOW();
+      } else {
+	  if (SYNCB_READ() == 0) {
+	      next_anode = 0;
+	  }
+      }
       PORTC |= _BV(0);
       PORTB |= _BV(1);
       // Select the next anode
-      if (next_anode == 0) {
+      if (next_anode == my_address * 2) {
 	  PORTC &= ~_BV(0);
-      } else if (next_anode == 1) {
+      } else if (next_anode == my_address * 2 + 1) {
 	  PORTB &= ~_BV(1);
       }
-      // Delay a few us for everything to settle.
-      _delay_us(5);
+      // Latch data into the register
+      SET_XLAT();
+      CLEAR_XLAT();
+      if (my_address == 0) {
+	  // Delay a few us for everything to settle.
+	  _delay_us(5);
+      } else {
+	  while (SYNCA_READ() == 0)
+	    /* no-op */ ;
+      }
+  }
+  if (my_address == 0) {
+      SYNCA_HIGH();
+      SYNCB_HIGH();
   }
   next_anode = (next_anode + 1) & 7;
   // Shift in the next set of anode data
@@ -405,6 +428,26 @@ ISR(TIMER1_COMPA_vect)
   // Trigger the output pulse
   CLEAR_BLANK();
   enable_gsclk();
+}
+
+ISR(TIMER1_COMPA_vect)
+{
+  // Enable interrupts so we are not blocking the SPI slave interrupt.
+  // The clock period is long enough that we don't have to worry about
+  // nested timer interrupts
+  sei();
+
+  do_scanline();
+}
+
+ISR(INT0_vect)
+{
+  // Enable interrupts so we are not blocking the SPI slave interrupt.
+  // The scanline period is long enough that we don't have to worry about
+  // nested interrupts
+  sei();
+
+  do_scanline();
 }
 
 static void
@@ -466,6 +509,28 @@ init_anodes(void)
   PORTB |= _BV(1);
 }
 
+/* Only used by boards 1-3 */
+static void
+init_int0(void)
+{
+  EICRA = _BV(ISC01);
+  EIMSK = _BV(INT0);
+}
+
+static void
+init_sync(void)
+{
+  SYNCA_HIGH();
+  SYNCB_HIGH();
+  if (my_address == 0) {
+      DDRD |= _BV(2) | _BV(3);
+      init_timer();
+  } else {
+      DDRD &= ~(_BV(2) | _BV(3));
+      init_int0();
+  }
+}
+
 int
 main()
 {
@@ -484,7 +549,7 @@ main()
   init_i2c();
   init_5940();
   init_spi_master();
-  init_timer();
+  init_sync();
 
   sei();
   do_data();
