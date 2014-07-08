@@ -35,6 +35,13 @@ volatile uint8_t fifo[FIFO_SIZE];
 
 volatile uint8_t fifo_head;
 
+static uint8_t eeprom_address EEMEM;
+static uint8_t eeprom_dc_r EEMEM;
+static uint8_t eeprom_dc_g EEMEM;
+static uint8_t eeprom_dc_b EEMEM;
+
+static uint8_t my_address;
+
 #define SET_XLAT() PORTD |= _BV(5)
 #define CLEAR_XLAT() PORTD &= ~_BV(5)
 
@@ -54,21 +61,17 @@ volatile uint8_t fifo_head;
 #define SYNCB_HIGH() PORTD |= _BV(3)
 #define SYNCB_READ() (PIND & _BV(3))
 
-// enable pullups on unused pins
 static void
 init_unused(void)
 {
-  // Not connected
-  //PORTC |= _BV(1) | _BV(2) | _BV(4) | _BV(5);
-  //PORTD |= _BV(0);
-}
-
-static void
-init_i2c(void)
-{
-  // We do not currently use I2C.
-  // However we do use them for ID so enable pullups
-  PORTC |= _BV(4) | _BV(5);
+  // Enable pullup on unused pins
+  PORTC |= _BV(1) | _BV(2);
+  PORTD |= _BV(0);
+  // Disable unused peripherals
+  PRR = _BV(PRTWI) | _BV(PRTIM2) | _BV(PRADC);
+  if (my_address != 0)
+    PRR |= _BV(PRTIM1);
+  ACSR = _BV(ACD);
 }
 
 static void
@@ -139,13 +142,6 @@ disable_gsclk(void)
       TCCR0B |= _BV(FOC0A);
   }
 }
-
-static uint8_t eeprom_address EEMEM;
-static uint8_t eeprom_dc_r EEMEM;
-static uint8_t eeprom_dc_g EEMEM;
-static uint8_t eeprom_dc_b EEMEM;
-
-static uint8_t my_address;
 
 static inline void
 set_pixel(uint16_t n, uint8_t val)
@@ -552,7 +548,6 @@ main()
 
   init_eeprom();
   init_unused();
-  init_i2c();
   init_5940();
   init_spi_master();
   init_sync();
