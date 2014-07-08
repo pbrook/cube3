@@ -263,9 +263,9 @@ do_data(void)
   sm = SM_IDLE;
   fifo_tail = 0;
   while (true) {
-      send_data();
       n = (fifo_head - fifo_tail) & FIFO_MASK;
       if (n < 4) {
+	  send_data();
 	  continue;
       }
       cmd = fifo[fifo_tail];
