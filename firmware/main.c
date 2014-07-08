@@ -34,6 +34,7 @@ volatile uint8_t next_anode;
 volatile uint8_t fifo[FIFO_SIZE];
 
 volatile uint8_t fifo_head;
+static uint8_t fifo_tail;
 
 static uint8_t eeprom_address EEMEM;
 static uint8_t eeprom_dc_r EEMEM;
@@ -164,6 +165,23 @@ static volatile uint8_t dc_green;
 static volatile uint8_t dc_blue;
 
 static void
+maybe_suspend(void)
+{
+  uint8_t n;
+  cli();
+  n = (fifo_head - fifo_tail) & FIFO_MASK;
+  if (n < 4) {
+      sleep_enable();
+      set_sleep_mode(SLEEP_MODE_IDLE);
+      sei();
+      sleep_cpu();
+      sleep_disable();
+
+  }
+  sei();
+}
+
+static void
 send_data(void)
 {
   uint8_t tmp;
@@ -217,6 +235,8 @@ send_data(void)
 	  _delay_us(5);
 	  sending_frame = false;
       }
+  } else {
+      maybe_suspend();
   }
 }
 
@@ -257,7 +277,6 @@ do_data(void)
   uint8_t d0;
   uint8_t d1;
   uint8_t d2;
-  uint8_t fifo_tail;
   uint8_t sm;
 
   sm = SM_IDLE;
