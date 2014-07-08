@@ -43,6 +43,9 @@ static uint8_t eeprom_dc_b EEMEM;
 
 static uint8_t my_address;
 
+static volatile uint8_t data_active;
+static bool board_idle;
+
 #define SET_XLAT() PORTD |= _BV(5)
 #define CLEAR_XLAT() PORTD &= ~_BV(5)
 
@@ -222,12 +225,14 @@ send_data(void)
       // double buffering means we probably only stall for 16 cycles and it is
       // not worth trying to be clever.
       tmp = display_framebuffer[fb_offset++];
+      data_active |= tmp;
       UDR0 = tmp >> 4;
       tmp <<= 4;
       while ((UCSR0A & _BV(UDRE0)) == 0)
 	/* no-op */;
       UDR0 = tmp;
       tmp = display_framebuffer[fb_offset++];
+      data_active |= tmp;
       while ((UCSR0A & _BV(UDRE0)) == 0)
 	/* no-op */;
       UDR0 = tmp;
@@ -303,6 +308,8 @@ do_data(void)
       fifo_tail = (fifo_tail + 1) & FIFO_MASK;
       d2 = fifo[fifo_tail];
       fifo_tail = (fifo_tail + 1) & FIFO_MASK;
+
+      data_active = 0xff;
 
       if (cmd == 0xe0) {
 	  if (d0 == 0xf0 && d1 == 0xf1 && d2 == 0xf2)
@@ -403,23 +410,31 @@ do_scanline(void)
 	SYNCA_LOW();
   } else {
       if (SYNCB_READ() == 0) {
+	  if (next_anode != 8)
+	    data_active = 0xff;
 	  next_anode = 0;
       } else if (next_anode < 8) {
 	  next_anode++;
       }
   }
+  if (next_anode == 0) {
+      board_idle = (data_active == 0);
+      data_active = 0;
+  }
   if (prev_anode < 8) {
       PORTC |= _BV(0);
       PORTB |= _BV(1);
-      // Select the next anode
+      // Select the active anode
       if (prev_anode == my_address * 2) {
 	  PORTC &= ~_BV(0);
       } else if (prev_anode == my_address * 2 + 1) {
 	  PORTB &= ~_BV(1);
       }
-      // Latch data into the register
-      SET_XLAT();
-      CLEAR_XLAT();
+      if (!board_idle) {
+	  // Latch data into the register
+	  SET_XLAT();
+	  CLEAR_XLAT();
+      }
   }
   if (my_address == 0) {
       // Delay a few us for everything to settle.
@@ -430,24 +445,27 @@ do_scanline(void)
       while (SYNCA_READ() == 0)
 	/* no-op */ ;
   }
-  if (next_anode < 8) {
-      // Shift in the next set of anode data
-      display_framebuffer = &framebuffer[(((uint16_t)display_frame * 8) + next_anode) * 16 * 3];
-      fb_offset = 0;
-      sending_frame = true;
-      // And dot correction data if needed
-      if (dc_changed) {
-	  dc_bytes = 12;
-	  SET_VPRG();
-	  dc_changed = false;
+  if (!board_idle) {
+      if (next_anode < 8) {
+	  // Shift in the next set of anode data
+	  display_framebuffer = &framebuffer[(((uint16_t)display_frame * 8) + next_anode) * 16 * 3];
+	  fb_offset = 0;
+	  sending_frame = true;
+	  // And dot correction data if needed
+	  if (dc_changed) {
+	      dc_bytes = 12;
+	      SET_VPRG();
+	      dc_changed = false;
+	      data_active = 0xff;
+	  }
       }
-  }
-  if (prev_anode < 8) {
-      // Triggering the greyscale clock is timing critical, so disable interrupts
-      cli();
-      // Trigger the output pulse
-      CLEAR_BLANK();
-      enable_gsclk();
+      if (prev_anode < 8) {
+	  // Triggering the greyscale clock is timing critical, so disable interrupts
+	  cli();
+	  // Trigger the output pulse
+	  CLEAR_BLANK();
+	  enable_gsclk();
+      }
   }
 }
 
@@ -561,6 +579,8 @@ main()
 
   fifo_head = 0;
   next_anode = 0xff;
+  data_active = 0xff;
+  board_idle = false;
   sending_frame = false;
   write_framebuffer = &framebuffer[0];
   display_framebuffer = &framebuffer[0];
