@@ -367,6 +367,7 @@ static void
 do_scanline(void)
 {
   static uint8_t overload;
+  uint8_t prev_anode;
   if (sending_frame) {
       overload = 0xff;
       next_anode = 0xff;
@@ -378,56 +379,61 @@ do_scanline(void)
       overload--;
       return;
   }
-  if (next_anode != 0xff && !overload) {
-      if (my_address == 0) {
-	  if (next_anode == 0) {
-	      SYNCB_LOW();
-	  }
-	  SYNCA_LOW();
-      } else {
-	  if (SYNCB_READ() == 0) {
-	      next_anode = 0;
-	  }
+  prev_anode = next_anode;
+  if (my_address == 0) {
+	next_anode = (next_anode + 1) & 7;
+	if (next_anode == 0) {
+	    SYNCB_LOW();
+	}
+	SYNCA_LOW();
+  } else {
+      if (SYNCB_READ() == 0) {
+	  next_anode = 0;
+      } else if (next_anode < 8) {
+	  next_anode++;
       }
+  }
+  if (prev_anode < 8) {
       PORTC |= _BV(0);
       PORTB |= _BV(1);
       // Select the next anode
-      if (next_anode == my_address * 2) {
+      if (prev_anode == my_address * 2) {
 	  PORTC &= ~_BV(0);
-      } else if (next_anode == my_address * 2 + 1) {
+      } else if (prev_anode == my_address * 2 + 1) {
 	  PORTB &= ~_BV(1);
       }
       // Latch data into the register
       SET_XLAT();
       CLEAR_XLAT();
-      if (my_address == 0) {
-	  // Delay a few us for everything to settle.
-	  _delay_us(5);
-      } else {
-	  while (SYNCA_READ() == 0)
-	    /* no-op */ ;
-      }
   }
   if (my_address == 0) {
+      // Delay a few us for everything to settle.
+      _delay_us(5);
       SYNCA_HIGH();
       SYNCB_HIGH();
+  } else {
+      while (SYNCA_READ() == 0)
+	/* no-op */ ;
   }
-  next_anode = (next_anode + 1) & 7;
-  // Shift in the next set of anode data
-  display_framebuffer = &framebuffer[(((uint16_t)display_frame * 8) + next_anode) * 16 * 3];
-  fb_offset = 0;
-  sending_frame = true;
-  // And dot correction data if needed
-  if (dc_changed) {
-      dc_bytes = 12;
-      SET_VPRG();
-      dc_changed = false;
+  if (next_anode < 8) {
+      // Shift in the next set of anode data
+      display_framebuffer = &framebuffer[(((uint16_t)display_frame * 8) + next_anode) * 16 * 3];
+      fb_offset = 0;
+      sending_frame = true;
+      // And dot correction data if needed
+      if (dc_changed) {
+	  dc_bytes = 12;
+	  SET_VPRG();
+	  dc_changed = false;
+      }
   }
-  // Triggering the greyscale clock is timing critical, so disable interrupts
-  cli();
-  // Trigger the output pulse
-  CLEAR_BLANK();
-  enable_gsclk();
+  if (prev_anode < 8) {
+      // Triggering the greyscale clock is timing critical, so disable interrupts
+      cli();
+      // Trigger the output pulse
+      CLEAR_BLANK();
+      enable_gsclk();
+  }
 }
 
 ISR(TIMER1_COMPA_vect)
