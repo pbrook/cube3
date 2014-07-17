@@ -173,7 +173,7 @@ maybe_suspend(void)
   uint8_t n;
   cli();
   n = (fifo_head - fifo_tail) & FIFO_MASK;
-  if (n < 4) {
+  if (n < 4 && !sending_frame) {
       sleep_enable();
       set_sleep_mode(SLEEP_MODE_IDLE);
       sei();
@@ -397,6 +397,8 @@ do_scanline(void)
 
   disable_gsclk();
   SET_BLANK();
+  PORTC |= _BV(0);
+  PORTB |= _BV(1);
   if (overload) {
       overload--;
       return;
@@ -422,8 +424,6 @@ do_scanline(void)
       data_active = 0;
   }
   if (prev_anode < 8) {
-      PORTC |= _BV(0);
-      PORTB |= _BV(1);
       // Select the active anode
       if (prev_anode == my_address * 2) {
 	  PORTC &= ~_BV(0);
